@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyBuddy - Group Formation Tool</title>
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --primary-dark: #4338CA;
+            --secondary: #10B981;
+            --danger: #EF4444;
+            --dark: #1F2937;
+            --light: #F3F4F6;
+            --white: #FFFFFF;
+        }
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background-color: var(--light);
+            color: var(--dark);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .card {
+            background: var(--white);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        input, select, button {
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #D1D5DB;
+            border-radius: 4px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background-color: var(--primary-dark);
+        }
+        .btn-danger {
+            background-color: var(--danger);
+        }
+        .btn-success {
+            background-color: var(--secondary);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #E5E7EB;
+        }
+        th {
+            background-color: #F9FAFB;
+        }
+        .flex {
+            display: flex;
+            gap: 10px;
+        }
+        .flex-1 {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 StudyBuddy</h1>
+            <p>Student Study Group Formation Tool</p>
+        </div>
+
+        <div class="flex">
+            <!-- Setup Dummy Data -->
+            <div class="card flex-1">
+                <h3>1. Quick Setup (Admin)</h3>
+                <p>Create mock subjects and students to test the app.</p>
+                <div class="flex">
+                    <input type="text" id="subjectName" placeholder="Subject Name (e.g. Math)">
+                    <button onclick="createSubject()">Add Subject</button>
+                </div>
+                <div class="flex" style="margin-top: 10px;">
+                    <input type="text" id="studentName" placeholder="Student Name">
+                    <button onclick="createStudent()">Add Student</button>
+                </div>
+            </div>
+
+            <!-- Create Group -->
+            <div class="card flex-1">
+                <h3>2. Create a Study Group</h3>
+                <input type="text" id="groupName" placeholder="Group Name">
+                <input type="number" id="maxMembers" placeholder="Max Members" min="1">
+                <select id="groupSubject"></select>
+                <select id="groupCreator"></select>
+                <button class="btn-success" onclick="createGroup()">Create Group</button>
+            </div>
+        </div>
+
+        <!-- Groups List -->
+        <div class="card">
+            <h3>3. View & Join Groups</h3>
+            <div class="flex">
+                <select id="filterSubject" class="flex-1"></select>
+                <button onclick="loadGroups()" style="width: auto; padding: 10px 20px;">Load Groups</button>
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Members</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="groupsTable">
+                    <!-- Data here -->
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Simulate User Action -->
+        <div class="card">
+            <h3>Current User Actions (Simulated)</h3>
+            <select id="currentUser"></select>
+            <p>Select a student above, then use the Join/Leave buttons in the table to act as them.</p>
+        </div>
+
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8080/api';
+
+        async function init() {
+            await loadSubjects();
+            await loadStudents();
+        }
+
+        async function createSubject() {
+            const name = document.getElementById('subjectName').value;
+            if(!name) return;
+            await fetch(`${API_URL}/subjects`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name})
+            });
+            document.getElementById('subjectName').value = '';
+            loadSubjects();
+        }
+
+        async function createStudent() {
+            const name = document.getElementById('studentName').value;
+            if(!name) return;
+            await fetch(`${API_URL}/students`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name, email: name.toLowerCase()+'@example.com'})
+            });
+            document.getElementById('studentName').value = '';
+            loadStudents();
+        }
+
+        async function loadSubjects() {
+            const res = await fetch(`${API_URL}/subjects`);
+            const data = await res.json();
+            const options = data.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+            document.getElementById('groupSubject').innerHTML = options;
+            document.getElementById('filterSubject').innerHTML = options;
+        }
+
+        async function loadStudents() {
+            const res = await fetch(`${API_URL}/students`);
+            const data = await res.json();
+            const options = data.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+            document.getElementById('groupCreator').innerHTML = options;
+            document.getElementById('currentUser').innerHTML = options;
+        }
+
+        async function createGroup() {
+            const payload = {
+                name: document.getElementById('groupName').value,
+                maxMembers: document.getElementById('maxMembers').value,
+                subjectId: document.getElementById('groupSubject').value,
+                creatorId: document.getElementById('groupCreator').value
+            };
+            const res = await fetch(`${API_URL}/groups`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            if(res.ok) {
+                alert('Group created!');
+                loadGroups();
+            } else {
+                alert(await res.text());
+            }
+        }
+
+        async function loadGroups() {
+            const subjectId = document.getElementById('filterSubject').value;
+            if(!subjectId) return;
+            const res = await fetch(`${API_URL}/subjects/${subjectId}/groups`);
+            const groups = await res.json();
+            
+            document.getElementById('groupsTable').innerHTML = groups.map(g => `
+                <tr>
+                    <td>${g.id}</td>
+                    <td>${g.name}</td>
+                    <td>${g.currentMembers} / ${g.maxMembers}</td>
+                    <td>
+                        <button onclick="joinGroup(${g.id})" style="width: auto;">Join</button>
+                        <button class="btn-danger" onclick="leaveGroup(${g.id})" style="width: auto;">Leave</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function joinGroup(groupId) {
+            const studentId = document.getElementById('currentUser').value;
+            const res = await fetch(`${API_URL}/groups/${groupId}/join?studentId=${studentId}`, {method: 'POST'});
+            if(res.ok) alert('Joined successfully'); else alert(await res.text());
+            loadGroups();
+        }
+
+        async function leaveGroup(groupId) {
+            const studentId = document.getElementById('currentUser').value;
+            const res = await fetch(`${API_URL}/groups/${groupId}/leave?studentId=${studentId}`, {method: 'POST'});
+            if(res.ok) alert('Left successfully'); else alert(await res.text());
+            loadGroups();
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
